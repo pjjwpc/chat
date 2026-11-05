@@ -14,12 +14,14 @@ import (
 	chatmw "github.com/openimsdk/chat/internal/api/mw"
 	"github.com/openimsdk/chat/internal/api/util"
 	"github.com/openimsdk/chat/pkg/common/config"
+	"github.com/openimsdk/chat/pkg/common/db/cache"
 	"github.com/openimsdk/chat/pkg/common/imapi"
 	"github.com/openimsdk/chat/pkg/common/kdisc"
 	disetcd "github.com/openimsdk/chat/pkg/common/kdisc/etcd"
 	"github.com/openimsdk/chat/pkg/common/rtc"
 	adminclient "github.com/openimsdk/chat/pkg/protocol/admin"
 	chatclient "github.com/openimsdk/chat/pkg/protocol/chat"
+	"github.com/openimsdk/tools/db/redisutil"
 	"github.com/openimsdk/tools/discovery/etcd"
 	"github.com/openimsdk/tools/errs"
 	"github.com/openimsdk/tools/mw"
@@ -74,6 +76,16 @@ func Start(ctx context.Context, index int, cfg *Config) error {
 	adminApi := New(chatClient, adminClient, im, &base)
 	adminApi.casdoorClient = NewCasdoorClient(cfg.ChatRPC.Casdoor)
 	adminApi.casdoorSyncSecret = cfg.ChatRPC.Casdoor.SyncSecret
+	
+	// Initialize Redis cache for Casdoor state if enabled
+	if cfg.ChatRPC.Casdoor.RedisCache {
+		rdb, err := redisutil.NewRedisClient(cfg.Redis.Build())
+		if err == nil {
+			adminApi.casdoorStateCache = cache.NewCasdoorStateCache(rdb)
+			adminApi.useRedisStateCache = true
+		}
+	}
+	
 	adminApi.Livekit = rtc.NewLiveKit(cfg.ChatRPC.LiveKit.Key, cfg.ChatRPC.LiveKit.Secret, cfg.ChatRPC.LiveKit.URL)
 	mwApi := chatmw.New(adminClient)
 	gin.SetMode(gin.ReleaseMode)

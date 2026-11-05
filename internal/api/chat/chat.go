@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/openimsdk/chat/internal/api/util"
+	"github.com/openimsdk/chat/pkg/common/db/cache"
 	"github.com/openimsdk/chat/pkg/common/rtc"
 
 	"github.com/gin-gonic/gin"
@@ -48,14 +49,16 @@ func New(chatClient chatpb.ChatClient, adminClient admin.AdminClient, imApiCalle
 
 type Api struct {
 	*util.Api
-	chatClient          chatpb.ChatClient
-	adminClient         admin.AdminClient
-	imApiCaller         imapi.CallerInterface
-	casdoorClient       CasdoorClient
-	casdoorSyncSecret   string
-	casdoorStateMu      sync.RWMutex
-	casdoorStates       map[string]*casdoorState
-	Livekit             *rtc.LiveKit
+	chatClient           chatpb.ChatClient
+	adminClient          admin.AdminClient
+	imApiCaller          imapi.CallerInterface
+	casdoorClient        CasdoorClient
+	casdoorSyncSecret    string
+	casdoorStateMu       sync.RWMutex
+	casdoorStates        map[string]*casdoorState
+	casdoorStateCache    cache.CasdoorStateInterface
+	useRedisStateCache   bool
+	Livekit              *rtc.LiveKit
 }
 
 // ################## ACCOUNT ##################

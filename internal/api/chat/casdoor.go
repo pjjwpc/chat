@@ -16,6 +16,7 @@ import (
 	"github.com/openimsdk/chat/pkg/common/apistruct"
 	"github.com/openimsdk/chat/pkg/common/config"
 	"github.com/openimsdk/chat/pkg/common/constant"
+	"github.com/openimsdk/chat/pkg/common/db/cache"
 	"github.com/openimsdk/chat/pkg/common/mctx"
 	"github.com/openimsdk/chat/pkg/protocol/admin"
 	chatpb "github.com/openimsdk/chat/pkg/protocol/chat"
@@ -427,6 +428,20 @@ func newCasdoorState() (string, error) {
 }
 
 func (o *Api) saveCasdoorState(state string, data *casdoorState) {
+	// Try Redis first if available
+	if o.useRedisStateCache && o.casdoorStateCache != nil {
+		redisData := &cache.CasdoorStateData{
+			RedirectURI: data.RedirectURI,
+			Client:      data.Client,
+			ExpiresAt:   data.ExpiresAt,
+		}
+		if err := o.casdoorStateCache.SaveState(context.Background(), state, redisData); err == nil {
+			return
+		}
+		// Fall back to in-memory if Redis fails
+	}
+	
+	// In-memory fallback
 	o.casdoorStateMu.Lock()
 	defer o.casdoorStateMu.Unlock()
 	if o.casdoorStates == nil {
@@ -442,6 +457,15 @@ func (o *Api) saveCasdoorState(state string, data *casdoorState) {
 }
 
 func (o *Api) consumeCasdoorState(state string, redirectURI string, client string) error {
+	// Try Redis first if available
+	if o.useRedisStateCache && o.casdoorStateCache != nil {
+		if err := o.casdoorStateCache.ValidateState(context.Background(), state, redirectURI, client); err == nil {
+			return nil
+		}
+		// Fall back to in-memory if Redis fails
+	}
+	
+	// In-memory fallback
 	o.casdoorStateMu.Lock()
 	defer o.casdoorStateMu.Unlock()
 	item, ok := o.casdoorStates[state]
