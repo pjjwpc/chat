@@ -17,6 +17,7 @@ import (
 	"github.com/openimsdk/chat/pkg/common/imapi"
 	"github.com/openimsdk/chat/pkg/common/kdisc"
 	disetcd "github.com/openimsdk/chat/pkg/common/kdisc/etcd"
+	"github.com/openimsdk/chat/pkg/common/rtc"
 	adminclient "github.com/openimsdk/chat/pkg/protocol/admin"
 	chatclient "github.com/openimsdk/chat/pkg/protocol/chat"
 	"github.com/openimsdk/tools/discovery/etcd"
@@ -30,10 +31,11 @@ import (
 )
 
 type Config struct {
-	ApiConfig config.API
-	Discovery config.Discovery
-	Share     config.Share
-	Redis     config.Redis
+	ApiConfig  config.API
+	ChatRPC    config.Chat
+	Discovery  config.Discovery
+	Share      config.Share
+	Redis      config.Redis
 
 	RuntimeEnv string
 }
@@ -70,6 +72,8 @@ func Start(ctx context.Context, index int, cfg *Config) error {
 		ChatAdminUserID: cfg.Share.ChatAdmin[0],
 	}
 	adminApi := New(chatClient, adminClient, im, &base)
+	adminApi.casdoorClient = NewCasdoorClient(cfg.ChatRPC.Casdoor)
+	adminApi.Livekit = rtc.NewLiveKit(cfg.ChatRPC.LiveKit.Key, cfg.ChatRPC.LiveKit.Secret, cfg.ChatRPC.LiveKit.URL)
 	mwApi := chatmw.New(adminClient)
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
@@ -133,6 +137,11 @@ func SetChatRoute(router gin.IRouter, chat *Api, mw *chatmw.MW) {
 	account.POST("/login", chat.Login)                                   // Login
 	account.POST("/password/reset", chat.ResetPassword)                  // Forgot password
 	account.POST("/password/change", mw.CheckToken, chat.ChangePassword) // Change password
+	account.POST("/casdoor/login_url", chat.CasdoorLoginURL)             // Casdoor login URL
+	account.POST("/casdoor/callback", chat.CasdoorCallback)              // Casdoor callback
+	account.POST("/casdoor/password", chat.CasdoorPassword)              // Casdoor password login
+	account.POST("/casdoor/logout", chat.CasdoorLogout)                  // Casdoor logout
+	account.POST("/casdoor/sync", chat.CasdoorSync)                      // Casdoor sync webhook
 
 	user := router.Group("/user", mw.CheckToken)
 	user.POST("/update", chat.UpdateUserInfo)                 // Edit personal information
@@ -141,6 +150,8 @@ func SetChatRoute(router gin.IRouter, chat *Api, mw *chatmw.MW) {
 	user.POST("/search/full", chat.SearchUserFullInfo)        // Search user's public information
 	user.POST("/search/public", chat.SearchUserPublicInfo)    // Search all information of the user
 	user.POST("/rtc/get_token", chat.GetTokenForVideoMeeting) // Get token for video meeting for the user
+	user.POST("/rtc/create_ingress", chat.CreateRtcIngress)   // Create RTMP ingress for video call
+	user.POST("/rtc/start_egress", chat.StartRtcEgress)       // Start RTMP egress for video call
 
 	router.POST("/friend/search", mw.CheckToken, chat.SearchFriend)
 

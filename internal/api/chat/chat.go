@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/openimsdk/chat/internal/api/util"
+	"github.com/openimsdk/chat/pkg/common/rtc"
 
 	"github.com/gin-gonic/gin"
 	"github.com/openimsdk/chat/pkg/common/apistruct"
@@ -48,6 +49,8 @@ type Api struct {
 	chatClient  chatpb.ChatClient
 	adminClient admin.AdminClient
 	imApiCaller imapi.CallerInterface
+	casdoorClient CasdoorClient
+	Livekit *rtc.LiveKit
 }
 
 // ################## ACCOUNT ##################
@@ -355,4 +358,67 @@ func (o *Api) LatestApplicationVersion(c *gin.Context) {
 
 func (o *Api) PageApplicationVersion(c *gin.Context) {
 	a2r.Call(c, admin.AdminClient.PageApplicationVersion, o.adminClient)
+}
+
+// ################## RTC ##################
+
+type createIngressReq struct {
+	RoomName            string `json:"roomName"            binding:"required"`
+	ParticipantIdentity string `json:"participantIdentity" binding:"required"`
+	ParticipantName     string `json:"participantName"`
+}
+
+type createIngressResp struct {
+	IngressID string `json:"ingressId"`
+	URL       string `json:"url"`
+	StreamKey string `json:"streamKey"`
+}
+
+func (o *Api) CreateRtcIngress(c *gin.Context) {
+	var req createIngressReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiresp.GinError(c, errs.ErrArgs.WrapMsg(err.Error()))
+		return
+	}
+	if o.Livekit == nil {
+		apiresp.GinError(c, errs.ErrInternalServer.WrapMsg("livekit not configured"))
+		return
+	}
+	info, err := o.Livekit.CreateIngress(c.Request.Context(), req.RoomName, req.ParticipantIdentity, req.ParticipantName)
+	if err != nil {
+		apiresp.GinError(c, errs.ErrInternalServer.WrapMsg(err.Error()))
+		return
+	}
+	apiresp.GinSuccess(c, &createIngressResp{
+		IngressID: info.IngressId,
+		URL:       info.Url,
+		StreamKey: info.StreamKey,
+	})
+}
+
+type startEgressReq struct {
+	RoomName  string `json:"roomName"  binding:"required"`
+	StreamUrl string `json:"streamUrl" binding:"required"`
+}
+
+type startEgressResp struct {
+	EgressID string `json:"egressId"`
+}
+
+func (o *Api) StartRtcEgress(c *gin.Context) {
+	var req startEgressReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		apiresp.GinError(c, errs.ErrArgs.WrapMsg(err.Error()))
+		return
+	}
+	if o.Livekit == nil {
+		apiresp.GinError(c, errs.ErrInternalServer.WrapMsg("livekit not configured"))
+		return
+	}
+	info, err := o.Livekit.StartRtmpEgress(c.Request.Context(), req.RoomName, req.StreamUrl)
+	if err != nil {
+		apiresp.GinError(c, errs.ErrInternalServer.WrapMsg(err.Error()))
+		return
+	}
+	apiresp.GinSuccess(c, &startEgressResp{EgressID: info.EgressId})
 }
