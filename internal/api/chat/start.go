@@ -80,12 +80,15 @@ func Start(ctx context.Context, index int, cfg *Config) error {
 	
 	// Initialize Redis cache for Casdoor state if enabled
 	if cfg.ChatRPC.Casdoor.RedisCache {
-		rdb, err := redisutil.NewRedisClient(cfg.Redis.Build())
+		rdb, err := redisutil.NewRedisClient(ctx, cfg.Redis.Build())
 		if err == nil {
 			adminApi.casdoorStateCache = cache.NewCasdoorStateCache(rdb)
 			adminApi.useRedisStateCache = true
 		}
 	}
+	
+	// Initialize RTC metrics collector
+	adminApi.rtcMetricsCollector = observability.NewDefaultRTCMetricsCollector()
 	
 	// Initialize observability (metrics and tracing) for Casdoor
 	if cfg.ChatRPC.Casdoor.EnableMetrics {
@@ -114,6 +117,24 @@ func Start(ctx context.Context, index int, cfg *Config) error {
 	}
 	
 	SetChatRoute(engine, adminApi, mwApi)
+
+	// Initialize metrics exporter and add routes
+	metricsExporter := observability.NewMetricsExporter(adminApi.rtcMetricsCollector, adminApi.metricsCollector)
+	engine.GET("/api/metrics", func(c *gin.Context) {
+		metricsExporter.HandleMetrics(c.Writer, c.Request)
+	})
+	engine.GET("/api/metrics/rtc", func(c *gin.Context) {
+		metricsExporter.HandleRTCMetrics(c.Writer, c.Request)
+	})
+	engine.GET("/api/metrics/casdoor", func(c *gin.Context) {
+		metricsExporter.HandleCasdoorMetrics(c.Writer, c.Request)
+	})
+	engine.GET("/api/health", func(c *gin.Context) {
+		metricsExporter.HandleHealth(c.Writer, c.Request)
+	})
+	engine.GET("/metrics", func(c *gin.Context) {
+		metricsExporter.HandlePrometheus(c.Writer, c.Request)
+	})
 
 	var (
 		netDone = make(chan struct{}, 1)
