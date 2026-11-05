@@ -56,6 +56,11 @@ type ChatDatabaseInterface interface {
 	UserLoginCountTotal(ctx context.Context, before *time.Time) (int64, error)
 	UserLoginCountRangeEverydayTotal(ctx context.Context, start *time.Time, end *time.Time) (map[string]int64, int64, error)
 	DelUserAccount(ctx context.Context, userIDs []string) error
+	TakeCasdoorBindingByCasdoorUserID(ctx context.Context, casdoorUserID string) (*chatdb.CasdoorBinding, error)
+	TakeCasdoorBindingByOpenIMUserID(ctx context.Context, openIMUserID string) (*chatdb.CasdoorBinding, error)
+	CreateCasdoorBinding(ctx context.Context, binding *chatdb.CasdoorBinding) error
+	UpdateCasdoorBindingSyncFields(ctx context.Context, binding *chatdb.CasdoorBinding) error
+	SetCasdoorBindingDisabled(ctx context.Context, casdoorUserID string, disabled bool) error
 }
 
 func NewChatDatabase(cli *mongoutil.Client) (ChatDatabaseInterface, error) {
@@ -87,6 +92,10 @@ func NewChatDatabase(cli *mongoutil.Client) (ChatDatabaseInterface, error) {
 	if err != nil {
 		return nil, err
 	}
+	casdoorBinding, err := chat.NewCasdoorBinding(cli.GetDB())
+	if err != nil {
+		return nil, err
+	}
 	return &ChatDatabase{
 		tx:               cli.GetTx(),
 		register:         register,
@@ -96,6 +105,7 @@ func NewChatDatabase(cli *mongoutil.Client) (ChatDatabaseInterface, error) {
 		userLoginRecord:  userLoginRecord,
 		verifyCode:       verifyCode,
 		forbiddenAccount: forbiddenAccount,
+		casdoorBinding:   casdoorBinding,
 	}, nil
 }
 
@@ -108,6 +118,7 @@ type ChatDatabase struct {
 	userLoginRecord  chatdb.UserLoginRecordInterface
 	verifyCode       chatdb.VerifyCodeInterface
 	forbiddenAccount admin.ForbiddenAccountInterface
+	casdoorBinding   chatdb.CasdoorBindingInterface
 }
 
 func (o *ChatDatabase) GetUser(ctx context.Context, userID string) (account *chatdb.Account, err error) {
@@ -290,4 +301,24 @@ func (o *ChatDatabase) DelUserAccount(ctx context.Context, userIDs []string) err
 		}
 		return nil
 	})
+}
+
+func (o *ChatDatabase) TakeCasdoorBindingByCasdoorUserID(ctx context.Context, casdoorUserID string) (*chatdb.CasdoorBinding, error) {
+	return o.casdoorBinding.TakeByCasdoorUserID(ctx, casdoorUserID)
+}
+
+func (o *ChatDatabase) TakeCasdoorBindingByOpenIMUserID(ctx context.Context, openIMUserID string) (*chatdb.CasdoorBinding, error) {
+	return o.casdoorBinding.TakeByOpenIMUserID(ctx, openIMUserID)
+}
+
+func (o *ChatDatabase) CreateCasdoorBinding(ctx context.Context, binding *chatdb.CasdoorBinding) error {
+	return o.casdoorBinding.Create(ctx, binding)
+}
+
+func (o *ChatDatabase) UpdateCasdoorBindingSyncFields(ctx context.Context, binding *chatdb.CasdoorBinding) error {
+	return o.casdoorBinding.UpdateSyncFields(ctx, binding)
+}
+
+func (o *ChatDatabase) SetCasdoorBindingDisabled(ctx context.Context, casdoorUserID string, disabled bool) error {
+	return o.casdoorBinding.SetDisabled(ctx, casdoorUserID, disabled)
 }

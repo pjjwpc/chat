@@ -1,0 +1,10 @@
+# Casdoor SSO Configuration
+# This file is used for Casdoor SSO integration
+# For production, configure these values with your Casdoor instance
+
+enabled: false
+endpoint: "http://localhost:8000"
+clientId: "your-client-id"
+clientSecret: "your-client-secret"
+syncSecret: "your-sync-secret"
+redisCache: true

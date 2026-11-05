@@ -233,7 +233,7 @@ func (o *Api) CasdoorLoginURL(c *gin.Context) {
 		apiresp.GinError(c, err)
 		return
 	}
-	o.saveCasdoorState(state, casdoorState{
+	o.saveCasdoorState(state, &casdoorState{
 		RedirectURI: req.RedirectURI,
 		Client:      req.Client,
 		ExpiresAt:   time.Now().Add(casdoorStateTTL),
@@ -267,7 +267,7 @@ func (o *Api) CasdoorCallback(c *gin.Context) {
 		apiresp.GinError(c, err)
 		return
 	}
-	o.completeCasdoorLogin(c, profile, req.Platform, req.DeviceId)
+	o.completeCasdoorLogin(c, profile, req.Platform, req.DeviceID)
 }
 
 func (o *Api) CasdoorPassword(c *gin.Context) {
@@ -289,7 +289,7 @@ func (o *Api) CasdoorPassword(c *gin.Context) {
 		apiresp.GinError(c, err)
 		return
 	}
-	o.completeCasdoorLogin(c, profile, req.Platform, req.DeviceId)
+	o.completeCasdoorLogin(c, profile, req.Platform, req.DeviceID)
 }
 
 func (o *Api) completeCasdoorLogin(c *gin.Context, profile *CasdoorProfile, platform int32, deviceID string) {
@@ -300,7 +300,7 @@ func (o *Api) completeCasdoorLogin(c *gin.Context, profile *CasdoorProfile, plat
 	}
 	resp, err := o.chatClient.CasdoorLogin(c, &chatpb.CasdoorLoginReq{
 		Profile: &chatpb.CasdoorProfile{
-			CasdoorUserId: profile.UserId,
+			CasdoorUserId: profile.UserID,
 			Name:          profile.Name,
 			Email:         profile.Email,
 			Phone:         profile.Phone,
@@ -308,8 +308,8 @@ func (o *Api) completeCasdoorLogin(c *gin.Context, profile *CasdoorProfile, plat
 			FaceUrl:       profile.FaceURL,
 			Disabled:      profile.Disabled,
 		},
-		Platform: platform,
-		DeviceId: deviceID,
+		Platform:  platform,
+		DeviceId:  deviceID,
 		IpAddress: ip,
 	})
 	if err != nil {
@@ -392,7 +392,7 @@ func (o *Api) CasdoorSync(c *gin.Context) {
 		apiresp.GinError(c, err)
 		return
 	}
-	if req.Profile.UserId == "" {
+	if req.Profile.UserID == "" {
 		apiresp.GinError(c, errs.ErrArgs.WrapMsg("casdoor userID is empty"))
 		return
 	}
@@ -402,13 +402,13 @@ func (o *Api) CasdoorSync(c *gin.Context) {
 	}
 	_, err = o.chatClient.CasdoorSync(c, &chatpb.CasdoorSyncReq{
 		Profile: &chatpb.CasdoorProfile{
-			UserID:   req.Profile.UserId,
-			Name:     req.Profile.Name,
-			Email:    req.Profile.Email,
-			Phone:    req.Profile.Phone,
-			Nickname: req.Profile.Nickname,
-			FaceURL:  req.Profile.FaceURL,
-			Disabled: req.Profile.Disabled,
+			CasdoorUserId: req.Profile.UserID,
+			Name:          req.Profile.Name,
+			Email:         req.Profile.Email,
+			Phone:         req.Profile.Phone,
+			Nickname:      req.Profile.Nickname,
+			FaceUrl:       req.Profile.FaceURL,
+			Disabled:      req.Profile.Disabled,
 		},
 	})
 	if err != nil {
@@ -426,11 +426,11 @@ func newCasdoorState() (string, error) {
 	return hex.EncodeToString(buf[:]), nil
 }
 
-func (o *Api) saveCasdoorState(state string, data casdoorState) {
+func (o *Api) saveCasdoorState(state string, data *casdoorState) {
 	o.casdoorStateMu.Lock()
 	defer o.casdoorStateMu.Unlock()
 	if o.casdoorStates == nil {
-		o.casdoorStates = make(map[string]casdoorState)
+		o.casdoorStates = make(map[string]*casdoorState)
 	}
 	now := time.Now()
 	for key, item := range o.casdoorStates {

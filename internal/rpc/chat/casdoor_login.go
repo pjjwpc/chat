@@ -79,7 +79,7 @@ func (o *chatSvr) CasdoorLogin(ctx context.Context, req *chat.CasdoorLoginReq) (
 		PhoneNumber:    profile.GetPhone(),
 		Email:          profile.GetEmail(),
 		Nickname:       casdoorNickname(req.Profile),
-		FaceURL:        profile.GetFaceURL(),
+		FaceURL:        profile.GetFaceUrl(),
 		Gender:         constant.GenderUnknown,
 		CreateTime:     now,
 		ChangeTime:     now,
@@ -112,7 +112,7 @@ func (o *chatSvr) resolveExistingCasdoorUser(ctx context.Context, profile *chat.
 	if profile.GetName() != "" {
 		attribute, err := o.Database.TakeAttributeByAccount(ctx, profile.GetName())
 		if err == nil {
-			return attribute.UserId, nil
+			return attribute.UserID, nil
 		}
 		if !dbutil.IsDBNotFound(err) {
 			return "", err
@@ -121,7 +121,7 @@ func (o *chatSvr) resolveExistingCasdoorUser(ctx context.Context, profile *chat.
 	if profile.GetEmail() != "" {
 		attribute, err := o.Database.TakeAttributeByEmail(ctx, profile.GetEmail())
 		if err == nil {
-			return attribute.UserId, nil
+			return attribute.UserID, nil
 		}
 		if !dbutil.IsDBNotFound(err) {
 			return "", err
@@ -138,7 +138,7 @@ func (o *chatSvr) createCasdoorBinding(ctx context.Context, userID string, profi
 		Email:         profile.GetEmail(),
 		Phone:         profile.GetPhone(),
 		Nickname:      casdoorNickname(profile),
-		FaceURL:       profile.GetFaceURL(),
+		FaceURL:       profile.GetFaceUrl(),
 		Disabled:      profile.GetDisabled(),
 	})
 }
@@ -171,7 +171,7 @@ func (o *chatSvr) syncCasdoorBinding(ctx context.Context, userID string, profile
 		Email:         profile.GetEmail(),
 		Phone:         profile.GetPhone(),
 		Nickname:      casdoorNickname(profile),
-		FaceURL:       profile.GetFaceURL(),
+		FaceURL:       profile.GetFaceUrl(),
 		Disabled:      disabled,
 	})
 }

@@ -128,7 +128,8 @@ type Chat struct {
 		Key    string `mapstructure:"key"`
 		Secret string `mapstructure:"secret"`
 	} `mapstructure:"liveKit"`
-	AllowRegister bool `mapstructure:"allowRegister"`
+	Casdoor       Casdoor `mapstructure:"casdoor"`
+	AllowRegister bool    `mapstructure:"allowRegister"`
 }
 
 type Bot struct {
@@ -176,6 +177,15 @@ type Admin struct {
 		Expire int `mapstructure:"expire"`
 	} `mapstructure:"tokenPolicy"`
 	Secret string `mapstructure:"secret"`
+}
+
+type Casdoor struct {
+	Enabled      bool   `mapstructure:"enabled"`
+	Endpoint     string `mapstructure:"endpoint"`
+	ClientID     string `mapstructure:"clientId"`
+	ClientSecret string `mapstructure:"clientSecret"`
+	SyncSecret   string `mapstructure:"syncSecret"`
+	RedisCache   bool   `mapstructure:"redisCache"`
 }
 
 type Log struct {

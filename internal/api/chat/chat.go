@@ -16,6 +16,7 @@ package chat
 
 import (
 	"io"
+	"sync"
 	"time"
 
 	"github.com/openimsdk/chat/internal/api/util"
@@ -37,20 +38,24 @@ import (
 
 func New(chatClient chatpb.ChatClient, adminClient admin.AdminClient, imApiCaller imapi.CallerInterface, api *util.Api) *Api {
 	return &Api{
-		Api:         api,
-		chatClient:  chatClient,
-		adminClient: adminClient,
-		imApiCaller: imApiCaller,
+		Api:            api,
+		chatClient:     chatClient,
+		adminClient:    adminClient,
+		imApiCaller:    imApiCaller,
+		casdoorStates:  make(map[string]*casdoorState),
 	}
 }
 
 type Api struct {
 	*util.Api
-	chatClient  chatpb.ChatClient
-	adminClient admin.AdminClient
-	imApiCaller imapi.CallerInterface
-	casdoorClient CasdoorClient
-	Livekit *rtc.LiveKit
+	chatClient          chatpb.ChatClient
+	adminClient         admin.AdminClient
+	imApiCaller         imapi.CallerInterface
+	casdoorClient       CasdoorClient
+	casdoorSyncSecret   string
+	casdoorStateMu      sync.RWMutex
+	casdoorStates       map[string]*casdoorState
+	Livekit             *rtc.LiveKit
 }
 
 // ################## ACCOUNT ##################

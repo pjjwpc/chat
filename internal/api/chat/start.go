@@ -73,6 +73,7 @@ func Start(ctx context.Context, index int, cfg *Config) error {
 	}
 	adminApi := New(chatClient, adminClient, im, &base)
 	adminApi.casdoorClient = NewCasdoorClient(cfg.ChatRPC.Casdoor)
+	adminApi.casdoorSyncSecret = cfg.ChatRPC.Casdoor.SyncSecret
 	adminApi.Livekit = rtc.NewLiveKit(cfg.ChatRPC.LiveKit.Key, cfg.ChatRPC.LiveKit.Secret, cfg.ChatRPC.LiveKit.URL)
 	mwApi := chatmw.New(adminClient)
 	gin.SetMode(gin.ReleaseMode)
