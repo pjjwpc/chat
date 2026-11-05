@@ -21,6 +21,7 @@ import (
 
 	"github.com/openimsdk/chat/internal/api/util"
 	"github.com/openimsdk/chat/pkg/common/db/cache"
+	"github.com/openimsdk/chat/pkg/common/observability"
 	"github.com/openimsdk/chat/pkg/common/rtc"
 
 	"github.com/gin-gonic/gin"
@@ -58,6 +59,8 @@ type Api struct {
 	casdoorStates        map[string]*casdoorState
 	casdoorStateCache    cache.CasdoorStateInterface
 	useRedisStateCache   bool
+	metricsCollector     observability.MetricsCollector
+	spanRecorder         observability.SpanRecorder
 	Livekit              *rtc.LiveKit
 }
 

@@ -18,6 +18,7 @@ import (
 	"github.com/openimsdk/chat/pkg/common/imapi"
 	"github.com/openimsdk/chat/pkg/common/kdisc"
 	disetcd "github.com/openimsdk/chat/pkg/common/kdisc/etcd"
+	"github.com/openimsdk/chat/pkg/common/observability"
 	"github.com/openimsdk/chat/pkg/common/rtc"
 	adminclient "github.com/openimsdk/chat/pkg/protocol/admin"
 	chatclient "github.com/openimsdk/chat/pkg/protocol/chat"
@@ -86,11 +87,32 @@ func Start(ctx context.Context, index int, cfg *Config) error {
 		}
 	}
 	
+	// Initialize observability (metrics and tracing) for Casdoor
+	if cfg.ChatRPC.Casdoor.EnableMetrics {
+		adminApi.metricsCollector = observability.NewDefaultMetricsCollector()
+	} else {
+		adminApi.metricsCollector = &observability.NoopMetricsCollector{}
+	}
+	if cfg.ChatRPC.Casdoor.EnableTracing {
+		adminApi.spanRecorder = &observability.NoopSpanRecorder{}
+	} else {
+		adminApi.spanRecorder = &observability.NoopSpanRecorder{}
+	}
+	
 	adminApi.Livekit = rtc.NewLiveKit(cfg.ChatRPC.LiveKit.Key, cfg.ChatRPC.LiveKit.Secret, cfg.ChatRPC.LiveKit.URL)
 	mwApi := chatmw.New(adminClient)
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.New()
 	engine.Use(gin.Recovery(), mw.CorsHandler(), mw.GinParseOperationID())
+	
+	// Add observability middleware if enabled
+	if cfg.ChatRPC.Casdoor.EnableMetrics {
+		engine.Use(observability.MetricsMiddleware(adminApi.metricsCollector))
+	}
+	if cfg.ChatRPC.Casdoor.EnableTracing {
+		engine.Use(observability.TracingMiddleware(adminApi.spanRecorder))
+	}
+	
 	SetChatRoute(engine, adminApi, mwApi)
 
 	var (

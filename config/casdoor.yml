@@ -7,4 +7,8 @@ endpoint: "http://localhost:8000"
 clientId: "your-client-id"
 clientSecret: "your-client-secret"
 syncSecret: "your-sync-secret"
-redisCache: true
+
+# Caching and Observability
+redisCache: true          # Enable Redis-based state caching for multi-instance support
+enableMetrics: true       # Enable Casdoor metrics collection
+enableTracing: false      # Enable distributed tracing (Jaeger integration)

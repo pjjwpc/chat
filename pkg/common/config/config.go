@@ -180,12 +180,14 @@ type Admin struct {
 }
 
 type Casdoor struct {
-	Enabled      bool   `mapstructure:"enabled"`
-	Endpoint     string `mapstructure:"endpoint"`
-	ClientID     string `mapstructure:"clientId"`
-	ClientSecret string `mapstructure:"clientSecret"`
-	SyncSecret   string `mapstructure:"syncSecret"`
-	RedisCache   bool   `mapstructure:"redisCache"`
+	Enabled       bool   `mapstructure:"enabled"`
+	Endpoint      string `mapstructure:"endpoint"`
+	ClientID      string `mapstructure:"clientId"`
+	ClientSecret  string `mapstructure:"clientSecret"`
+	SyncSecret    string `mapstructure:"syncSecret"`
+	RedisCache    bool   `mapstructure:"redisCache"`
+	EnableMetrics bool   `mapstructure:"enableMetrics"`
+	EnableTracing bool   `mapstructure:"enableTracing"`
 }
 
 type Log struct {
