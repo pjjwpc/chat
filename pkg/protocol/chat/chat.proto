@@ -288,6 +288,44 @@ message GetAllowRegisterResp {
   bool allowRegister = 1;
 }
 
+// Casdoor OAuth2 and SSO support
+message CasdoorProfile {
+  string casdoor_user_id = 1;      // Casdoor 用户 ID（唯一标识）
+  string name = 2;                 // 真实姓名
+  string email = 3;                // 邮箱（关键：用于备用绑定）
+  string phone = 4;                // 电话号码
+  string nickname = 5;             // 昵称
+  string face_url = 6;             // 头像 URL
+  bool disabled = 7;               // 是否禁用
+  string organization = 8;         // 所属组织
+  string department = 9;           // 所属部门
+}
+
+message CasdoorLoginReq {
+  CasdoorProfile profile = 1;      // Casdoor 用户信息
+  int32 platform = 2;              // 平台类型（1=iOS, 2=Android, 3=Web, 4=PC）
+  string device_id = 3;            // 设备 ID
+  string ip_address = 4;           // 客户端 IP
+  string user_agent = 5;           // User-Agent
+}
+
+message CasdoorLoginResp {
+  string user_id = 1;              // 新用户 ID（OpenIM 用户 ID）
+  string chat_token = 2;           // Chat 服务的 Token
+  string im_token = 3;             // IM 服务的 Token
+  int64 expires_in = 4;            // Token 有效期（秒）
+}
+
+message CasdoorSyncReq {
+  CasdoorProfile profile = 1;      // Casdoor 用户信息
+  string operation = 2;            // 操作类型：create/update/delete
+}
+
+message CasdoorSyncResp {
+  bool success = 1;                // 是否成功
+  string message = 2;              // 状态消息
+  string error_code = 3;           // 错误代码
+}
 
 service chat {
   // Edit personal information - called by the user or an administrator
@@ -323,4 +361,8 @@ service chat {
 
   rpc SetAllowRegister(SetAllowRegisterReq) returns(SetAllowRegisterResp);
   rpc GetAllowRegister(GetAllowRegisterReq) returns(GetAllowRegisterResp);
+
+  // Casdoor SSO support
+  rpc CasdoorLogin(CasdoorLoginReq) returns(CasdoorLoginResp);
+  rpc CasdoorSync(CasdoorSyncReq) returns(CasdoorSyncResp);
 }

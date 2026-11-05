@@ -267,7 +267,7 @@ func (o *Api) CasdoorCallback(c *gin.Context) {
 		apiresp.GinError(c, err)
 		return
 	}
-	o.completeCasdoorLogin(c, profile, req.Platform, req.DeviceID)
+	o.completeCasdoorLogin(c, profile, req.Platform, req.DeviceId)
 }
 
 func (o *Api) CasdoorPassword(c *gin.Context) {
@@ -289,7 +289,7 @@ func (o *Api) CasdoorPassword(c *gin.Context) {
 		apiresp.GinError(c, err)
 		return
 	}
-	o.completeCasdoorLogin(c, profile, req.Platform, req.DeviceID)
+	o.completeCasdoorLogin(c, profile, req.Platform, req.DeviceId)
 }
 
 func (o *Api) completeCasdoorLogin(c *gin.Context, profile *CasdoorProfile, platform int32, deviceID string) {
@@ -300,17 +300,17 @@ func (o *Api) completeCasdoorLogin(c *gin.Context, profile *CasdoorProfile, plat
 	}
 	resp, err := o.chatClient.CasdoorLogin(c, &chatpb.CasdoorLoginReq{
 		Profile: &chatpb.CasdoorProfile{
-			UserID:   profile.UserID,
-			Name:     profile.Name,
-			Email:    profile.Email,
-			Phone:    profile.Phone,
-			Nickname: profile.Nickname,
-			FaceURL:  profile.FaceURL,
-			Disabled: profile.Disabled,
+			CasdoorUserId: profile.UserId,
+			Name:          profile.Name,
+			Email:         profile.Email,
+			Phone:         profile.Phone,
+			Nickname:      profile.Nickname,
+			FaceUrl:       profile.FaceURL,
+			Disabled:      profile.Disabled,
 		},
 		Platform: platform,
-		DeviceID: deviceID,
-		Ip:       ip,
+		DeviceId: deviceID,
+		IpAddress: ip,
 	})
 	if err != nil {
 		apiresp.GinError(c, err)
@@ -327,35 +327,35 @@ func (o *Api) completeCasdoorLogin(c *gin.Context, profile *CasdoorProfile, plat
 		nickname = profile.Name
 	}
 	if nickname == "" {
-		nickname = resp.UserID
+		nickname = resp.UserId
 	}
-	isUserNotExist, err := o.imApiCaller.AccountCheckSingle(apiCtx, resp.UserID)
+	isUserNotExist, err := o.imApiCaller.AccountCheckSingle(apiCtx, resp.UserId)
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
 	}
 	if isUserNotExist {
 		err = o.imApiCaller.RegisterUser(apiCtx, []*sdkws.UserInfo{{
-			UserID:     resp.UserID,
+			UserID:     resp.UserId,
 			Nickname:   nickname,
 			FaceURL:    profile.FaceURL,
 			CreateTime: time.Now().UnixMilli(),
 		}})
 	} else {
-		err = o.imApiCaller.UpdateUserInfo(apiCtx, resp.UserID, nickname, profile.FaceURL)
+		err = o.imApiCaller.UpdateUserInfo(apiCtx, resp.UserId, nickname, profile.FaceURL)
 	}
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
 	}
-	imToken, err := o.imApiCaller.GetUserToken(apiCtx, resp.UserID, platform)
+	imToken, err := o.imApiCaller.GetUserToken(apiCtx, resp.UserId, platform)
 	if err != nil {
 		apiresp.GinError(c, err)
 		return
 	}
 	apiresp.GinSuccess(c, &apistruct.LoginResp{
 		ImToken:   imToken,
-		UserID:    resp.UserID,
+		UserID:    resp.UserId,
 		ChatToken: resp.ChatToken,
 	})
 }
@@ -392,7 +392,7 @@ func (o *Api) CasdoorSync(c *gin.Context) {
 		apiresp.GinError(c, err)
 		return
 	}
-	if req.Profile.UserID == "" {
+	if req.Profile.UserId == "" {
 		apiresp.GinError(c, errs.ErrArgs.WrapMsg("casdoor userID is empty"))
 		return
 	}
@@ -402,7 +402,7 @@ func (o *Api) CasdoorSync(c *gin.Context) {
 	}
 	_, err = o.chatClient.CasdoorSync(c, &chatpb.CasdoorSyncReq{
 		Profile: &chatpb.CasdoorProfile{
-			UserID:   req.Profile.UserID,
+			UserID:   req.Profile.UserId,
 			Name:     req.Profile.Name,
 			Email:    req.Profile.Email,
 			Phone:    req.Profile.Phone,

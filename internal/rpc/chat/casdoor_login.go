@@ -17,17 +17,17 @@ import (
 
 func (o *chatSvr) CasdoorLogin(ctx context.Context, req *chat.CasdoorLoginReq) (*chat.CasdoorLoginResp, error) {
 	profile := req.GetProfile()
-	if profile.GetUserID() == "" {
+	if profile.GetCasdoorUserId() == "" {
 		return nil, errs.ErrArgs.WrapMsg("casdoor user id is empty")
 	}
 	if profile.GetDisabled() {
-		if binding, err := o.Database.TakeCasdoorBindingByCasdoorUserID(ctx, profile.GetUserID()); err == nil {
+		if binding, err := o.Database.TakeCasdoorBindingByCasdoorUserID(ctx, profile.GetCasdoorUserId()); err == nil {
 			_ = o.syncCasdoorBinding(ctx, binding.OpenIMUserID, profile, true)
 		}
 		return nil, eerrs.ErrForbidden.WrapMsg("casdoor user disabled")
 	}
 
-	binding, err := o.Database.TakeCasdoorBindingByCasdoorUserID(ctx, profile.GetUserID())
+	binding, err := o.Database.TakeCasdoorBindingByCasdoorUserID(ctx, profile.GetCasdoorUserId())
 	if err == nil {
 		if binding.Disabled {
 			return nil, eerrs.ErrForbidden.WrapMsg("casdoor user disabled")
@@ -39,7 +39,7 @@ func (o *chatSvr) CasdoorLogin(ctx context.Context, req *chat.CasdoorLoginReq) (
 		if err != nil {
 			return nil, err
 		}
-		return &chat.CasdoorLoginResp{UserID: binding.OpenIMUserID, ChatToken: token.Token}, nil
+		return &chat.CasdoorLoginResp{UserId: binding.OpenIMUserID, ChatToken: token.Token}, nil
 	}
 
 	if userID, err := o.resolveExistingCasdoorUser(ctx, profile); err != nil {
@@ -52,15 +52,15 @@ func (o *chatSvr) CasdoorLogin(ctx context.Context, req *chat.CasdoorLoginReq) (
 		if err != nil {
 			return nil, err
 		}
-		return &chat.CasdoorLoginResp{UserID: userID, ChatToken: token.Token}, nil
+		return &chat.CasdoorLoginResp{UserId: userID, ChatToken: token.Token}, nil
 	}
 
-	userID := buildCasdoorOpenIMUserID(profile.GetUserID())
+	userID := buildCasdoorOpenIMUserID(profile.GetCasdoorUserId())
 	now := time.Now()
 	register := &chatdb.Register{
 		UserID:      userID,
-		DeviceID:    req.GetDeviceID(),
-		IP:          req.GetIp(),
+		DeviceID:    req.GetDeviceId(),
+		IP:          req.GetIpAddress(),
 		Platform:    constantpb.PlatformIDToName(int(req.Platform)),
 		AccountType: "",
 		Mode:        constant.UserMode,
@@ -91,7 +91,7 @@ func (o *chatSvr) CasdoorLogin(ctx context.Context, req *chat.CasdoorLoginReq) (
 	}
 	credentials := []*chatdb.Credential{{
 		UserID:      userID,
-		Account:     "casdoor:" + profile.GetUserID(),
+		Account:     "casdoor:" + profile.GetCasdoorUserId(),
 		Type:        constant.CredentialAccount,
 		AllowChange: false,
 	}}
@@ -105,14 +105,14 @@ func (o *chatSvr) CasdoorLogin(ctx context.Context, req *chat.CasdoorLoginReq) (
 	if err != nil {
 		return nil, err
 	}
-	return &chat.CasdoorLoginResp{UserID: userID, ChatToken: token.Token}, nil
+	return &chat.CasdoorLoginResp{UserId: userID, ChatToken: token.Token}, nil
 }
 
 func (o *chatSvr) resolveExistingCasdoorUser(ctx context.Context, profile *chat.CasdoorProfile) (string, error) {
 	if profile.GetName() != "" {
 		attribute, err := o.Database.TakeAttributeByAccount(ctx, profile.GetName())
 		if err == nil {
-			return attribute.UserID, nil
+			return attribute.UserId, nil
 		}
 		if !dbutil.IsDBNotFound(err) {
 			return "", err
@@ -121,7 +121,7 @@ func (o *chatSvr) resolveExistingCasdoorUser(ctx context.Context, profile *chat.
 	if profile.GetEmail() != "" {
 		attribute, err := o.Database.TakeAttributeByEmail(ctx, profile.GetEmail())
 		if err == nil {
-			return attribute.UserID, nil
+			return attribute.UserId, nil
 		}
 		if !dbutil.IsDBNotFound(err) {
 			return "", err
@@ -132,7 +132,7 @@ func (o *chatSvr) resolveExistingCasdoorUser(ctx context.Context, profile *chat.
 
 func (o *chatSvr) createCasdoorBinding(ctx context.Context, userID string, profile *chat.CasdoorProfile) error {
 	return o.Database.CreateCasdoorBinding(ctx, &chatdb.CasdoorBinding{
-		CasdoorUserID: profile.GetUserID(),
+		CasdoorUserID: profile.GetCasdoorUserId(),
 		CasdoorName:   profile.GetName(),
 		OpenIMUserID:  userID,
 		Email:         profile.GetEmail(),
@@ -145,10 +145,10 @@ func (o *chatSvr) createCasdoorBinding(ctx context.Context, userID string, profi
 
 func (o *chatSvr) CasdoorSync(ctx context.Context, req *chat.CasdoorSyncReq) (*chat.CasdoorSyncResp, error) {
 	profile := req.GetProfile()
-	if profile.GetUserID() == "" {
+	if profile.GetCasdoorUserId() == "" {
 		return nil, errs.ErrArgs.WrapMsg("casdoor user id is empty")
 	}
-	binding, err := o.Database.TakeCasdoorBindingByCasdoorUserID(ctx, profile.GetUserID())
+	binding, err := o.Database.TakeCasdoorBindingByCasdoorUserID(ctx, profile.GetCasdoorUserId())
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func (o *chatSvr) CasdoorSync(ctx context.Context, req *chat.CasdoorSyncReq) (*c
 
 func (o *chatSvr) syncCasdoorBinding(ctx context.Context, userID string, profile *chat.CasdoorProfile, disabled bool) error {
 	return o.Database.UpdateCasdoorBindingSyncFields(ctx, &chatdb.CasdoorBinding{
-		CasdoorUserID: profile.GetUserID(),
+		CasdoorUserID: profile.GetCasdoorUserId(),
 		CasdoorName:   profile.GetName(),
 		OpenIMUserID:  userID,
 		Email:         profile.GetEmail(),
@@ -188,7 +188,7 @@ func casdoorNickname(profile *chat.CasdoorProfile) string {
 	if profile.GetName() != "" {
 		return profile.GetName()
 	}
-	return profile.GetUserID()
+	return profile.GetCasdoorUserId()
 }
 
 var _ = chat.RegisterUserInfo{}
